@@ -48,3 +48,5 @@ coverage/
 
 /generated/prisma
 /server/.env
+/CLAUDE.md
+/AGENTS.md
