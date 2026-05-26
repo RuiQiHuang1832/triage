@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,9 +11,64 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum SessionStatus {
+  in_progress
+  completed
+}
+
+enum MessageRole {
+  user
+  assistant
+  tool
+}
+
 model Patient {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   name        String
   dateOfBirth DateTime
-  createdAt   DateTime @default(now())
+  createdAt   DateTime        @default(now())
+  sessions    IntakeSession[]
+}
+
+model IntakeSession {
+  id          String         @id @default(cuid())
+  patientId   String
+  patient     Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  status      SessionStatus  @default(in_progress)
+  createdAt   DateTime       @default(now())
+  completedAt DateTime?
+  messages    Message[]
+  summary     IntakeSummary?
+
+  @@index([patientId])
+}
+
+model Message {
+  id         String        @id @default(cuid())
+  sessionId  String
+  session    IntakeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role       MessageRole
+  content    String
+  toolUseId  String?
+  toolName   String?
+  toolInput  Json?
+  toolResult Json?
+  createdAt  DateTime      @default(now())
+
+  @@index([sessionId])
+}
+
+model IntakeSummary {
+  id              String        @id @default(cuid())
+  sessionId       String        @unique
+  session         IntakeSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  chiefComplaint  String
+  symptoms        Json
+  duration        String
+  medications     Json
+  allergies       Json
+  redFlags        Json
+  bmi             Float?
+  rawSummary      String
+  createdAt       DateTime      @default(now())
 }

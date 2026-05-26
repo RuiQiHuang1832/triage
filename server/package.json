@@ -5,7 +5,10 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test:rxnorm": "tsx lib/external/rxnorm.test.ts",
+    "test:openfda": "tsx lib/external/openfda.test.ts",
+    "test:medlineplus": "tsx lib/external/medlineplus.test.ts",
+    "test:tools": "tsx lib/agent/tools.test.ts"
   },
   "keywords": [],
   "author": "",
@@ -15,8 +18,11 @@
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
     "express": "^5.2.1",
+    "fast-xml-parser": "^5.8.0",
     "prisma": "^6.19.3",
-    "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.3"
   }
 }

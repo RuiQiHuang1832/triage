@@ -50,3 +50,5 @@ coverage/
 /server/.env
 /CLAUDE.md
 /AGENTS.md
+/.vscode
+/notes.md
