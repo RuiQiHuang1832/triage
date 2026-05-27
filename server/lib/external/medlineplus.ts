@@ -2,17 +2,7 @@ import { XMLParser } from "fast-xml-parser";
 
 const BASE_URL = "https://wsearch.nlm.nih.gov/ws/query";
 
-// API wrapper / client for the MedlinePlus Web Service (NIH/NLM consumer health info).
-// Returns plain-language condition descriptions sourced from MedlinePlus health topics,
-// used by the agent to ground its summaries with cited NIH content rather than relying
-// on the model's own training data.
-//
-// IMPORTANT: This is a keyword search engine (NLM's Essie), NOT semantic / natural-language
-// search. Passing a full sentence like "patient has shortness of breath for several weeks"
-// technically works — stop words get filtered and terms are AND-ed — but ranking degrades
-// and results get noisy. Claude must reason over the conversation FIRST and pass a tight
-// query: a likely condition name ("asthma", "GERD") or a short symptom phrase
-// ("chronic lower back pain"). The tool description in tools.ts must enforce this.
+// Claude must reason over the conversation FIRST and pass a tight query: a likely condition name ("asthma", "GERD") or a short symptom phrase ("chronic lower back pain"). The tool description in tools.ts must enforce this.
 
 export interface HealthTopic {
   title: string;
@@ -56,10 +46,7 @@ interface ParsedContent {
   "#text"?: string | number;
 }
 
-export async function searchHealthTopics(
-  query: string,
-  maxResults = 3,
-): Promise<HealthTopicSearch> {
+export async function searchHealthTopics(query: string, maxResults = 3): Promise<HealthTopicSearch> {
   const url = `${BASE_URL}?db=healthTopics&term=${encodeURIComponent(query)}&retmax=${maxResults}`;
   const res = await fetch(url);
   if (!res.ok) {
@@ -94,5 +81,8 @@ function toHealthTopic(doc: ParsedDocument): HealthTopic {
 // after the XML parser decodes the entity-encoded form. Strip tags and collapse whitespace
 // so Claude receives clean prose.
 function stripHtml(value: string): string {
-  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }

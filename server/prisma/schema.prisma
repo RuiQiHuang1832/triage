@@ -67,7 +67,6 @@ model IntakeSummary {
   duration        String
   medications     Json
   allergies       Json
-  redFlags        Json
   bmi             Float?
   rawSummary      String
   createdAt       DateTime      @default(now())
