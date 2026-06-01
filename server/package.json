@@ -8,12 +8,15 @@
     "test:rxnorm": "tsx lib/external/rxnorm.test.ts",
     "test:openfda": "tsx lib/external/openfda.test.ts",
     "test:medlineplus": "tsx lib/external/medlineplus.test.ts",
-    "test:tools": "tsx lib/agent/tools.test.ts"
+    "test:tools": "tsx lib/agent/tools.test.ts",
+    "test:ping": "tsx --env-file=.env lib/agent/ping.test.ts",
+    "test:agent": "tsx --env-file=.env lib/agent/agent.test.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.99.0",
     "@prisma/client": "^6.19.3",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.1",
