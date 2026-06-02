@@ -1,4 +1,4 @@
-# Agentic Health Intake
+# Triage — Agentic Health Intake System
 
 An AI-driven health intake system that conducts a structured, multi-turn conversation with a patient, asks intelligent follow-up questions based on their answers, calls real external medical APIs, and produces a clean pre-visit summary for the clinician.
 
