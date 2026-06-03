@@ -15,7 +15,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const patient = await prisma.patient.create({
-  data: { name: "Test Patient", dateOfBirth: new Date("1990-01-01") },
+  data: { clientId: `test-${crypto.randomUUID()}` },
 });
 const session = await prisma.intakeSession.create({
   data: { patientId: patient.id },

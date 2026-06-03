@@ -86,9 +86,7 @@ export async function runAgentLoop(
 
     // Stream text to the patient as Claude writes it.
     stream.on("text", (delta) => emit({ type: "token", text: delta }));
-    // Fire the tool badge the instant a tool_use block opens — before its input
-    // JSON has even finished streaming. There's no patient-facing text on a tool
-    // turn (the prompt forbids it), so this is the only signal the UI gets.
+
     stream.on("streamEvent", (event) => {
       if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
         emit({ type: "tool_call", tool: event.content_block.name });
@@ -144,9 +142,7 @@ export async function runAgentLoop(
       });
     }
 
-    // The summary is the final tool — the session is now complete. Return a
-    // static closing message instead of looping back for Claude to generate one,
-    // saving a round-trip now that there's nothing left to decide.
+
     if (summaryGenerated) {
       return { reply: COMPLETION_MESSAGE, complete: true };
     }

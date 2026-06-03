@@ -5,12 +5,15 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "dev": "tsx watch --env-file=.env index.ts",
+    "start": "tsx --env-file=.env index.ts",
     "test:rxnorm": "tsx lib/external/rxnorm.test.ts",
     "test:openfda": "tsx lib/external/openfda.test.ts",
     "test:medlineplus": "tsx lib/external/medlineplus.test.ts",
     "test:tools": "tsx lib/agent/tools.test.ts",
     "test:ping": "tsx --env-file=.env lib/agent/ping.test.ts",
-    "test:agent": "tsx --env-file=.env lib/agent/agent.test.ts"
+    "test:agent": "tsx --env-file=.env lib/agent/agent.test.ts",
+    "test:stream": "tsx --env-file=.env lib/agent/stream.test.ts"
   },
   "keywords": [],
   "author": "",
