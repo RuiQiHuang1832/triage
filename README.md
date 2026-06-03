@@ -39,7 +39,7 @@ User message
 - Node.js + TypeScript
 - Anthropic Claude API (`claude-sonnet-4`) with tool use
 - Prisma ORM + PostgreSQL (Supabase)
-- Express (planned for the HTTP/SSE layer)
+- Express HTTP layer with Server-Sent Events (SSE) for streaming
 
 **Frontend** *(coming soon)*
 - Next.js 15, TypeScript, Tailwind, shadcn/ui
