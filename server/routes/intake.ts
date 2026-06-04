@@ -27,6 +27,43 @@ intakeRouter.post("/session", async (req: Request, res: Response) => {
   res.status(201).json({ sessionId: session.id, patientId: patient.id });
 });
 
+// GET /session?clientId=… — every session for a browser, newest first, to populate the sidebar.
+// Each row carries a `preview`: the first patient message, used as an auto-title before any real title exists. A brand-new clientId with no patient record yet just gets an empty list.
+intakeRouter.get("/session", async (req: Request, res: Response) => {
+  const clientId = req.query.clientId;
+  if (typeof clientId !== "string" || !clientId.trim()) {
+    res.status(400).json({ error: "clientId is required" });
+    return;
+  }
+
+  const patient = await prisma.patient.findUnique({
+    where: { clientId },
+    include: {
+      sessions: {
+        orderBy: { createdAt: "desc" },
+        include: {
+          // The first patient turn, used as the sidebar title.
+          messages: {
+            where: { role: "user" },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+
+  const sessions = (patient?.sessions ?? []).map((session) => ({
+    id: session.id,
+    status: session.status,
+    createdAt: session.createdAt,
+    completedAt: session.completedAt,
+    preview: session.messages[0]?.content ?? null,
+  }));
+
+  res.json({ sessions });
+});
+
 // GET /session/:id — session + its messages, oldest first, so the client can rehydrate the chat on reload.
 intakeRouter.get("/session/:id", async (req: Request, res: Response) => {
   const session = await prisma.intakeSession.findUnique({
