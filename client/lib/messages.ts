@@ -4,9 +4,12 @@
 
 import type { Message } from "./types";
 
+// A tool badge is "running" while the agent is mid-call (live streaming only), then resolves to "done" or "error". Rehydrated rows are always already resolved.
+export type ToolState = "running" | "done" | "error";
+
 export type DisplayItem =
   | { kind: "bubble"; id: string; role: "user" | "assistant"; content: string }
-  | { kind: "tool"; id: string; tool: string; isError: boolean };
+  | { kind: "tool"; id: string; tool: string; state: ToolState };
 
 export function toDisplayItems(messages: Message[]): DisplayItem[] {
   const items: DisplayItem[] = [];
@@ -19,7 +22,7 @@ export function toDisplayItems(messages: Message[]): DisplayItem[] {
         items.push({ kind: "bubble", id: m.id, role: "assistant", content: m.content });
       }
     } else if (m.role === "tool") {
-      items.push({ kind: "tool", id: m.id, tool: m.toolName ?? "", isError: isErrorResult(m.toolResult) });
+      items.push({ kind: "tool", id: m.id, tool: m.toolName ?? "", state: isErrorResult(m.toolResult) ? "error" : "done" });
     }
   }
   return items;

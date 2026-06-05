@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { AppSidebar } from "@/components/Sidebar";
 import { ChatView } from "@/components/ChatView";
@@ -26,7 +26,7 @@ export default function Home() {
   return (
     <>
       {state.status === "ready" ? (
-        <SidebarProvider className="h-svh">
+        <SidebarProvider className="h-svh" style={{ "--sidebar-width": "18rem" } as CSSProperties}>
           <AppSidebar />
           <SidebarInset className="min-h-0">
             <header className="flex h-12 items-center gap-2 border-b border-border px-3">

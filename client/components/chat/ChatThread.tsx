@@ -28,8 +28,6 @@ export function ChatThread({ items, loading = false, error = null, pending = fal
           <p className="text-center text-sm text-muted-foreground">Loading conversation…</p>
         ) : error ? (
           <p className="text-center text-sm text-destructive">{error}</p>
-        ) : items.length === 0 && !pending ? (
-          <EmptyState />
         ) : (
           items.map((item) =>
             item.kind === "bubble" ? (
@@ -37,7 +35,7 @@ export function ChatThread({ items, loading = false, error = null, pending = fal
                 {item.content}
               </MessageBubble>
             ) : (
-              <ToolCallBadge key={item.id} tool={item.tool} state={item.isError ? "error" : "done"} />
+              <ToolCallBadge key={item.id} tool={item.tool} state={item.state} />
             ),
           )
         )}
@@ -45,18 +43,6 @@ export function ChatThread({ items, loading = false, error = null, pending = fal
         {pending && <TypingIndicator />}
         <div ref={bottomRef} />
       </div>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <p className="text-sm font-medium text-foreground">Let&apos;s get started</p>
-      <p className="max-w-sm text-sm text-muted-foreground">
-        Describe what brought you in today — your main symptom or concern — and I&apos;ll ask a few
-        follow-up questions.
-      </p>
     </div>
   );
 }
