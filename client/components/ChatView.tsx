@@ -6,14 +6,28 @@ import { streamMessage } from "@/lib/stream";
 import { toDisplayItems, type DisplayItem } from "@/lib/messages";
 import { ChatThread } from "@/components/chat/ChatThread";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { ChatLanding } from "@/components/chat/ChatLanding";
+import { CompletionNotice } from "@/components/chat/CompletionNotice";
 
 const GREETINGS = ["Let's begin your intake.", "Welcome. Let's get started.", "Let's start your health intake.", "Let's gather a few details.", " Let's prepare your visit.",]
 
-export function ChatView({ sessionId }: { sessionId: string }) {
+export function ChatView({
+  sessionId: propSessionId,
+  existing = false,
+  activateDraft,
+  onTurnEnd,
+}: {
+  sessionId: string | null;
+  existing?: boolean;
+  activateDraft: () => Promise<string>;
+  onTurnEnd?: () => void;
+}) {
+  // The live session id. Null on a fresh draft until the first message promotes it to a real server session (activateDraft); seeded from the prop when reopening an existing session.
+  const [sessionId, setSessionId] = useState<string | null>(propSessionId);
+
   const [items, setItems] = useState<DisplayItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(existing);
   const [error, setError] = useState<string | null>(null);
-  // `pending` drives the typing indicator: true whenever we're waiting on the agent's next output (before the first token, and again after a tool resolves). `streaming` locks the composer for the whole turn; `completed` locks it permanently once the intake is done.
   const [pending, setPending] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -25,14 +39,15 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const idCounter = useRef(0);
   const nextId = (prefix: string) => `local-${prefix}-${idCounter.current++}`;
 
-  // Aborts an in-flight stream if the component unmounts (e.g. switching sessions in Phase 5, which remounts on the sessionId key).
+  // Aborts an in-flight stream if the component unmounts (e.g. switching sessions, which remounts on the viewKey).
   const abortRef = useRef<AbortController | null>(null);
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  // Rehydrate on mount.
+  // Rehydrate a reopened session on mount. A fresh draft (existing=false) has nothing to load.
   useEffect(() => {
+    if (!existing || !propSessionId) return;
     let active = true;
-    getSession(sessionId)
+    getSession(propSessionId)
       .then((session) => {
         if (!active) return;
         setItems(toDisplayItems(session.messages));
@@ -47,7 +62,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
     return () => {
       active = false;
     };
-  }, [sessionId]);
+  }, [propSessionId, existing]);
 
   const handleSend = async (text: string) => {
     const ctrl = new AbortController();
@@ -76,21 +91,28 @@ export function ChatView({ sessionId }: { sessionId: string }) {
     };
 
     try {
+      // First message of a draft: create the server session now. Empty drafts never reach the DB, and the session only appears in the sidebar from this point.
+      let id = sessionId;
+      if (!id) {
+        id = await activateDraft();
+        setSessionId(id);
+      }
+
       const result = await streamMessage(
-        sessionId,
+        id,
         text,
         {
           onToken: (delta) => ensureAssistantBubble(delta),
           onToolCall: (tool) => {
             setPending(false);
-            const id = nextId(`tool-${tool}`);
-            (runningTools[tool] ??= []).push(id);
-            setItems((prev) => [...prev, { kind: "tool", id, tool, state: "running" }]);
+            const toolId = nextId(`tool-${tool}`);
+            (runningTools[tool] ??= []).push(toolId);
+            setItems((prev) => [...prev, { kind: "tool", id: toolId, tool, state: "running" }]);
           },
           onToolResult: (tool, isError) => {
-            const id = runningTools[tool]?.shift();
-            if (id) {
-              setItems((prev) => prev.map((it) => (it.id === id && it.kind === "tool" ? { ...it, state: isError ? "error" : "done" } : it)));
+            const toolId = runningTools[tool]?.shift();
+            if (toolId) {
+              setItems((prev) => prev.map((it) => (it.id === toolId && it.kind === "tool" ? { ...it, state: isError ? "error" : "done" } : it)));
             }
             // The agent resumes reasoning after a tool resolves — wait on it again.
             setPending(true);
@@ -99,7 +121,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
         ctrl.signal,
       );
 
-      // The completion turn returns a canned closing message without streaming any tokens, so there may be no assistant bubble yet. Fall back to the final reply for that case.
+      // The completion turn may return a canned closing without streaming any tokens, so there may be no assistant bubble yet. Fall back to the final reply for that case.
       if (!assistantStarted && result.reply) {
         setItems((prev) => [...prev, { kind: "bubble", id: assistantId, role: "assistant", content: result.reply }]);
       }
@@ -111,6 +133,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
       if (!ctrl.signal.aborted) {
         setStreaming(false);
         setPending(false);
+        onTurnEnd?.();
       }
     }
   };
@@ -121,13 +144,9 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {isEmpty ? (
-        <div className="relative flex flex-1 flex-col items-center justify-center gap-7 overflow-hidden px-4 pb-[12vh]">
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[50vh] bg-[radial-gradient(ellipse_at_bottom,rgba(255,255,255,0.13),transparent_70%)]" />
-          <h1 className="relative font-display text-3xl text-foreground">{greeting}</h1>
-          <div className="relative w-full max-w-5xl ">
-            <ChatInput onSend={handleSend} disabled={loading || error !== null} />
-          </div>
-        </div>
+        <ChatLanding greeting={greeting}>
+          <ChatInput onSend={handleSend} disabled={loading || error !== null} />
+        </ChatLanding>
       ) : (
         <>
           <ChatThread items={items} loading={loading} error={error} pending={pending} />
@@ -136,7 +155,11 @@ export function ChatView({ sessionId }: { sessionId: string }) {
               <p className="rounded-md border border-destructive/30 px-3 py-2 text-sm text-destructive">{streamError} — please try again.</p>
             </div>
           )}
-          <ChatInput onSend={handleSend} disabled={loading || streaming || completed || error !== null} />
+          {completed ? (
+            sessionId && <CompletionNotice sessionId={sessionId} />
+          ) : (
+            <ChatInput onSend={handleSend} disabled={loading || streaming || error !== null} compact />
+          )}
         </>
       )}
     </div>

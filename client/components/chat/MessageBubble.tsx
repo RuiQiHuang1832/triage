@@ -6,19 +6,12 @@ export function MessageBubble({ role, children }: { role: "user" | "assistant"; 
   const isUser = role === "user";
   return (
     <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
-      <div
-        className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed wrap-break-word",
-          isUser ? "rounded-br-md bg-primary text-primary-foreground whitespace-pre-wrap" : "rounded-bl-md text-foreground",
-        )}
-      >
-        {isUser || typeof children !== "string" ? children : <AssistantMarkdown content={children} />}
-      </div>
+      <div className={cn("max-w-[80%] rounded-2xl px-4 py-2.5 leading-relaxed wrap-break-word", isUser ? "rounded-br-md bg-primary text-primary-foreground whitespace-pre-wrap" : "rounded-bl-md text-foreground")}>{isUser || typeof children !== "string" ? children : <AssistantMarkdown content={children} />}</div>
     </div>
   );
 }
 
-// Renders the assistant's text as markdown. The element styles below give lists, headings, code, and paragraphs sensible spacing inside the bubble, since we don't pull in the Tailwind typography plugin.
+
 function AssistantMarkdown({ content }: { content: string }) {
   return (
     <div className="space-y-2">

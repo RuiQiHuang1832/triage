@@ -20,11 +20,10 @@ const MAX_TOKENS = 2048;
 
 const MAX_ITERATIONS = 12;
 
-// Shown to the patient once `generate_intake_summary` runs. We return this
-// directly rather than letting Claude generate a closing message — the session
-// is complete and the interface locks, so there's nothing left to reason about.
-const COMPLETION_MESSAGE =
-  "Thank you — that's everything I need. I've put together a summary for your clinician, who will review it with you at your visit. Take care.";
+// Fallback sign-off if the model calls generate_intake_summary without writing its own closing line.
+// The prompt asks for one, so this is just a safety net.
+const DEFAULT_CLOSING =
+  "Thank you — that's everything I need. I've prepared a summary for your clinician to review with you at your visit. Take care.";
 
 const client = new Anthropic();
 
@@ -144,7 +143,12 @@ export async function runAgentLoop(
 
 
     if (summaryGenerated) {
-      return { reply: COMPLETION_MESSAGE, complete: true };
+      let closing = extractText(response.content);
+      if (!closing) {
+        closing = DEFAULT_CLOSING;
+        await prisma.message.create({ data: { sessionId, role: "assistant", content: closing } });
+      }
+      return { reply: closing, complete: true };
     }
 
     messages.push({ role: "user", content: toolResults });

@@ -32,15 +32,31 @@ export interface SessionSummaryRow {
   preview: string | null;
 }
 
+// One symptom entry inside a summary, as the agent's generate_intake_summary tool structures it.
+export interface SummarySymptom {
+  description: string;
+  severity?: "mild" | "moderate" | "severe";
+  duration?: string;
+  location?: string;
+}
+
+// One medication entry inside a summary.
+export interface SummaryMedication {
+  name: string;
+  dose?: string;
+  frequency?: string;
+}
+
 // The final structured summary from GET /session/:id/summary (404 until the intake completes).
+// The array fields are stored as JSON columns, so treat them as best-effort shapes and render defensively.
 export interface IntakeSummary {
   id: string;
   sessionId: string;
   chiefComplaint: string;
-  symptoms: unknown;
+  symptoms: SummarySymptom[];
   duration: string;
-  medications: unknown;
-  allergies: unknown;
+  medications: SummaryMedication[];
+  allergies: string[];
   bmi: number | null;
   rawSummary: string;
   createdAt: string;
