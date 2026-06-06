@@ -29,8 +29,9 @@ User message
   - `lookup_condition_info` — MedlinePlus (NIH)
   - `calculate_bmi` — height/weight → BMI + category
   - `generate_intake_summary` — produces the structured pre-visit summary
-- **Streaming responses** — Claude's output and tool-call lifecycle events stream as they happen, so the UI can show live progress (e.g. "Checking drug interactions…").
-- **Full conversation persistence** — every message and tool result is written to the database, so a session can be reloaded and resumed.
+- **Live chat interface** — Claude's replies stream token by token alongside a typing indicator and tool-call badges that surface what the agent is doing in the moment (e.g. "Checking drug interactions…"), making the agentic behavior visible as it happens.
+- **Session history & resume** — every message and tool result is persisted; past intakes are listed in a sidebar and can be reopened and continued. Identity is per-browser, so there's no account to create.
+- **Pre-visit summaries** — a completed intake produces a formatted summary — chief complaint, symptoms, medications, allergies, BMI, and a clinical narrative — browseable any time from a dedicated Summaries page.
 - **Prompt caching** — the system prompt, tool definitions, and conversation history are cached to cut token cost across turns.
 
 ## Tech Stack
@@ -41,5 +42,8 @@ User message
 - Prisma ORM + PostgreSQL (Supabase)
 - Express HTTP layer with Server-Sent Events (SSE) for streaming
 
-**Frontend** *(coming soon)*
-- Next.js 15, TypeScript, Tailwind, shadcn/ui
+**Frontend**
+- Next.js 16 + React 19, TypeScript
+- Tailwind CSS v4, shadcn/ui, lucide-react icons
+- Streaming chat UI that consumes the backend SSE stream (`@microsoft/fetch-event-source`)
+- react-markdown for rendering the summary, Vercel Web Analytics
