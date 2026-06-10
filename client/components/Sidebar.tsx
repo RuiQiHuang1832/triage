@@ -1,21 +1,13 @@
 "use client";
 
-import { CirclePlus, ScrollText } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRef } from "react";
+import { FileTextIcon, type FileTextIconHandle } from "@/components/ui/file-text";
+import { SquarePenIcon, type SquarePenIconHandle } from "@/components/ui/square-pen";
 import type { SessionSummaryRow } from "@/lib/types";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSkeleton } from "@/components/ui/sidebar";
 
 interface AppSidebarProps {
   sessions: SessionSummaryRow[];
@@ -28,13 +20,18 @@ interface AppSidebarProps {
 export function AppSidebar({ sessions, activeSessionId, loading = false, onSelect, onNewIntake }: AppSidebarProps) {
   const pathname = usePathname();
   const onChat = pathname === "/";
+  const summariesIconRef = useRef<FileTextIconHandle>(null);
+  const newIntakeIconRef = useRef<SquarePenIconHandle>(null);
 
   const visible = sessions.filter((s) => s.preview !== null || s.id === activeSessionId);
 
   return (
     <Sidebar>
       <SidebarHeader>
-        <span className="px-2 py-1 text-xl font-semibold">Triage</span>
+        <div className="flex items-center gap-2 px-2 pb-4 pt-2">
+          <Image src="/android-chrome-192x192.png" alt="" width={24} height={24} className="rounded-md" priority />
+          <span className="text-xl font-semibold">Triage</span>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
@@ -42,15 +39,15 @@ export function AppSidebar({ sessions, activeSessionId, loading = false, onSelec
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={onNewIntake}>
-                  <CirclePlus className="size-5!" />
+                <SidebarMenuButton onClick={onNewIntake} onMouseEnter={() => newIntakeIconRef.current?.startAnimation()} onMouseLeave={() => newIntakeIconRef.current?.stopAnimation()}>
+                  <SquarePenIcon ref={newIntakeIconRef} size={20} className="shrink-0 [&>svg]:size-5!" />
                   <span>New Intake</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/summaries"}>
-                  <Link href="/summaries">
-                    <ScrollText className="size-5!" />
+                  <Link href="/summaries" onMouseEnter={() => summariesIconRef.current?.startAnimation()} onMouseLeave={() => summariesIconRef.current?.stopAnimation()}>
+                    <FileTextIcon ref={summariesIconRef} size={20} className="shrink-0 [&>svg]:size-5!" />
                     <span>Summaries</span>
                   </Link>
                 </SidebarMenuButton>
@@ -60,7 +57,7 @@ export function AppSidebar({ sessions, activeSessionId, loading = false, onSelec
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Past sessions</SidebarGroupLabel>
+          <SidebarGroupLabel>Recents</SidebarGroupLabel>
           <SidebarGroupContent>
             {loading && visible.length === 0 ? (
               <SidebarMenu>
@@ -76,11 +73,7 @@ export function AppSidebar({ sessions, activeSessionId, loading = false, onSelec
               <SidebarMenu>
                 {visible.map((session) => (
                   <SidebarMenuItem key={session.id}>
-                    <SidebarMenuButton
-                      isActive={onChat && session.id === activeSessionId}
-                      onClick={() => onSelect(session.id)}
-                      title={session.preview ?? undefined}
-                    >
+                    <SidebarMenuButton isActive={onChat && session.id === activeSessionId} onClick={() => onSelect(session.id)} title={session.preview ?? undefined}>
                       <span>{session.preview ?? "New intake"}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

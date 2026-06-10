@@ -6,15 +6,19 @@ import { ArrowLeft } from "lucide-react";
 import { getSummary } from "@/lib/api";
 import type { IntakeSummary, SessionSummaryRow } from "@/lib/types";
 import { useIntake } from "@/components/AppShell";
+import { PageTitle } from "@/components/PageTitle";
 import { SummaryCard } from "@/components/SummaryCard";
 import { Button } from "@/components/ui/button";
 
 export default function SummariesPage() {
   // useSearchParams needs a Suspense boundary above it during prerendering.
   return (
-    <Suspense>
-      <SummariesContent />
-    </Suspense>
+    <>
+      <PageTitle>Summaries</PageTitle>
+      <Suspense>
+        <SummariesContent />
+      </Suspense>
+    </>
   );
 }
 

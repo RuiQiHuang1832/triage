@@ -3,10 +3,14 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import { ArrowUp, FileText, Plus } from "lucide-react";
+import { ArrowUp, FileText, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+// A ready-made, detailed intake so recruiters/testers don't have to invent symptoms. It supplies chief complaint, duration, severity, meds, allergies, and history up front so the agent has almost nothing left to ask, and the lisinopril + ibuprofen pairing gives the drug-interaction tool something real to flag.
+const SAMPLE_PROMPT =
+  "I'm a 54-year-old man and for the past 5 days I've had a persistent throbbing headache across my forehead and behind my eyes, about a 7 out of 10. It's worse in the mornings, and I've also had a stuffy nose. No fever, no vision changes, and no nausea. I take lisinopril 20mg daily for high blood pressure and metformin 1000mg twice a day for type 2 diabetes, and I've been taking ibuprofen 400mg every few hours to deal with the headache. I'm allergic to penicillin, which gives me hives. My medical history is high blood pressure and type 2 diabetes, and my father had a stroke at 60.";
 
 export function ChatInput({ onSend, disabled = false, compact = false }: { onSend: (text: string) => void; disabled?: boolean; compact?: boolean }) {
   // Once the conversation is underway we dock the composer: a neutral placeholder and a shorter resting height.
@@ -52,6 +56,15 @@ export function ChatInput({ onSend, disabled = false, compact = false }: { onSen
             </Button>
           </div>
         </div>
+        {/* Auto-fill helper: only on the landing composer, only while interactive (skips the disabled loading/onboarding placeholder so the slide-up doesn't replay when the real input mounts), and only while the box is empty so we never clobber what someone is typing. Fills the textarea but deliberately does not submit. */}
+        {!compact && !disabled && text.length === 0 && (
+          <div className="mt-3 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out">
+            <Button type="button" variant="outline" size="sm" onClick={() => setText(SAMPLE_PROMPT)} className="rounded-full text-muted-foreground">
+              <Sparkles />
+              Auto-fill test prompt
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
