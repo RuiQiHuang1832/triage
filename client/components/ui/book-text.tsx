@@ -7,16 +7,16 @@ import { forwardRef, useCallback, useImperativeHandle, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-export interface FileTextIconHandle {
+export interface BookTextIconHandle {
   startAnimation: () => void;
   stopAnimation: () => void;
 }
 
-interface FileTextIconProps extends HTMLAttributes<HTMLDivElement> {
+interface BookTextIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
 }
 
-const FILE_TEXT = forwardRef<FileTextIconHandle, FileTextIconProps>(
+const BOOK_TEXT = forwardRef<BookTextIconHandle, BookTextIconProps>(
   ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
     const controls = useAnimation();
     const isControlledRef = useRef(false);
@@ -82,23 +82,22 @@ const FILE_TEXT = forwardRef<FileTextIconHandle, FileTextIconProps>(
           width={size}
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-          <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20" />
 
           <motion.path
-            d="M10 9H8"
+            d="M8 7h6"
             stroke="currentColor"
             strokeWidth="2"
             variants={{
               normal: {
                 pathLength: 1,
                 x1: 8,
-                x2: 10,
+                x2: 14,
               },
               animate: {
                 pathLength: [1, 0, 1],
-                x1: [8, 10, 8],
-                x2: [10, 10, 10],
+                x1: [8, 14, 8],
+                x2: [14, 14, 14],
                 transition: {
                   duration: 0.7,
                   delay: 0.3,
@@ -107,7 +106,7 @@ const FILE_TEXT = forwardRef<FileTextIconHandle, FileTextIconProps>(
             }}
           />
           <motion.path
-            d="M16 13H8"
+            d="M8 11h8"
             stroke="currentColor"
             strokeWidth="2"
             variants={{
@@ -127,33 +126,12 @@ const FILE_TEXT = forwardRef<FileTextIconHandle, FileTextIconProps>(
               },
             }}
           />
-          <motion.path
-            d="M16 17H8"
-            stroke="currentColor"
-            strokeWidth="2"
-            variants={{
-              normal: {
-                pathLength: 1,
-                x1: 8,
-                x2: 16,
-              },
-              animate: {
-                pathLength: [1, 0, 1],
-                x1: [8, 16, 8],
-                x2: [16, 16, 16],
-                transition: {
-                  duration: 0.7,
-                  delay: 0.7,
-                },
-              },
-            }}
-          />
         </motion.svg>
       </div>
     );
   }
 );
 
-FILE_TEXT.displayName = "FileTextIcon";
+BOOK_TEXT.displayName = "BookTextIcon";
 
-export { FILE_TEXT as FileTextIcon };
+export { BOOK_TEXT as BookTextIcon };

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef } from "react";
-import { FileTextIcon, type FileTextIconHandle } from "@/components/ui/file-text";
+import { BookTextIcon, type BookTextIconHandle } from "@/components/ui/book-text";
 import { SquarePenIcon, type SquarePenIconHandle } from "@/components/ui/square-pen";
 import type { SessionSummaryRow } from "@/lib/types";
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSkeleton } from "@/components/ui/sidebar";
@@ -20,7 +20,7 @@ interface AppSidebarProps {
 export function AppSidebar({ sessions, activeSessionId, loading = false, onSelect, onNewIntake }: AppSidebarProps) {
   const pathname = usePathname();
   const onChat = pathname === "/";
-  const summariesIconRef = useRef<FileTextIconHandle>(null);
+  const summariesIconRef = useRef<BookTextIconHandle>(null);
   const newIntakeIconRef = useRef<SquarePenIconHandle>(null);
 
   const visible = sessions.filter((s) => s.preview !== null || s.id === activeSessionId);
@@ -47,7 +47,7 @@ export function AppSidebar({ sessions, activeSessionId, loading = false, onSelec
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/summaries"}>
                   <Link href="/summaries" onMouseEnter={() => summariesIconRef.current?.startAnimation()} onMouseLeave={() => summariesIconRef.current?.stopAnimation()}>
-                    <FileTextIcon ref={summariesIconRef} size={20} className="shrink-0 [&>svg]:size-5!" />
+                    <BookTextIcon ref={summariesIconRef} size={20} className="shrink-0 [&>svg]:size-5!" />
                     <span>Summaries</span>
                   </Link>
                 </SidebarMenuButton>
