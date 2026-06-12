@@ -13,6 +13,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 import { loadHistory } from "./history.js";
 import { SYSTEM_PROMPT } from "./prompt.js";
+import { generateSessionTitle } from "./title.js";
 import { tools, runTool } from "./tools.js";
 
 const MODEL = "claude-sonnet-4-6";
@@ -40,10 +41,12 @@ export interface AgentResult {
 // transcript: `token` text streams into the message bubble, while `tool_call` /
 // `tool_result` drive the ToolCallBadge ("🔍 Checking drug interactions…").
 // We emit the tool *name* only — the UI owns the wording shown to the patient.
+// `title` fires once, on the first turn, when the session's sidebar label is ready.
 export type AgentEvent =
   | { type: "token"; text: string }
   | { type: "tool_call"; tool: string }
-  | { type: "tool_result"; tool: string; isError: boolean };
+  | { type: "tool_result"; tool: string; isError: boolean }
+  | { type: "title"; title: string };
 
 export type EmitFn = (event: AgentEvent) => void;
 
@@ -69,93 +72,117 @@ export async function runAgentLoop(
   });
   const messages = await loadHistory(sessionId);
 
+  // First user turn (this message is the only one in history): name the session for the sidebar.
+  // Runs concurrently with the agent's response and emits a `title` event the moment it's ready;
+  // we await it before returning (see the finally) so the SSE stream stays open until it's sent.
+  const titleTask = messages.length === 1 ? titleSession(sessionId, userText, emit) : null;
+
   let summaryGenerated = false;
   let cachedTail: CacheableBlock | null = null;
 
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    cachedTail = moveCacheBreakpoint(messages, cachedTail);
+  try {
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      cachedTail = moveCacheBreakpoint(messages, cachedTail);
 
-    const stream = client.messages.stream({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_BLOCKS,
-      tools: tools as Anthropic.Tool[],
-      messages,
-    });
-
-    // Stream text to the patient as Claude writes it.
-    stream.on("text", (delta) => emit({ type: "token", text: delta }));
-
-    stream.on("streamEvent", (event) => {
-      if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
-        emit({ type: "tool_call", tool: event.content_block.name });
-      }
-    });
-
-    // Resolves once the stream is fully assembled — same Message shape the
-    // non-streaming create() returned, so the rest of the loop is unchanged.
-    const response = await stream.finalMessage();
-    console.log("usage:", response.usage);
-    await persistAssistantTurn(sessionId, response.content);
-    messages.push({ role: "assistant", content: response.content });
-
-    if (response.stop_reason === "end_turn") {
-      const reply = extractText(response.content);
-      return { reply, complete: summaryGenerated };
-    }
-
-    if (response.stop_reason !== "tool_use") {
-      // max_tokens, refusal, pause_turn, etc. — not something this loop handles yet. Surface it loudly instead of silently returning a half-finished turn.
-      throw new Error(`Unexpected stop_reason: ${response.stop_reason}`);
-    }
-
-    // Run every tool Claude asked for and collect the results into a single user turn, as the API requires.
-    const toolResults: Anthropic.ToolResultBlockParam[] = [];
-    for (const block of response.content) {
-      if (block.type !== "tool_use") continue;
-
-      const { resultForDb, resultForApi, isError } = await executeTool(block.name, block.input);
-      emit({ type: "tool_result", tool: block.name, isError });
-
-      if (block.name === "generate_intake_summary" && !isError) {
-        await saveSummary(sessionId, block.input as SummaryInput);
-        summaryGenerated = true;
-      }
-
-      await prisma.message.create({
-        data: {
-          sessionId,
-          role: "tool",
-          content: "",
-          toolName: block.name,
-          toolUseId: block.id,
-          toolResult: resultForDb as Prisma.InputJsonValue,
-        },
+      const stream = client.messages.stream({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_BLOCKS,
+        tools: tools as Anthropic.Tool[],
+        messages,
       });
 
-      toolResults.push({
-        type: "tool_result",
-        tool_use_id: block.id,
-        content: resultForApi,
-        is_error: isError,
+      // Stream text to the patient as Claude writes it.
+      stream.on("text", (delta) => emit({ type: "token", text: delta }));
+
+      stream.on("streamEvent", (event) => {
+        if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
+          emit({ type: "tool_call", tool: event.content_block.name });
+        }
       });
-    }
 
+      // Resolves once the stream is fully assembled — same Message shape the
+      // non-streaming create() returned, so the rest of the loop is unchanged.
+      const response = await stream.finalMessage();
+      console.log("usage:", response.usage);
+      await persistAssistantTurn(sessionId, response.content);
+      messages.push({ role: "assistant", content: response.content });
 
-    if (summaryGenerated) {
-      let closing = extractText(response.content);
-      if (!closing) {
-        closing = DEFAULT_CLOSING;
-        await prisma.message.create({ data: { sessionId, role: "assistant", content: closing } });
+      if (response.stop_reason === "end_turn") {
+        const reply = extractText(response.content);
+        return { reply, complete: summaryGenerated };
       }
-      return { reply: closing, complete: true };
+
+      if (response.stop_reason !== "tool_use") {
+        // max_tokens, refusal, pause_turn, etc. — not something this loop handles yet. Surface it loudly instead of silently returning a half-finished turn.
+        throw new Error(`Unexpected stop_reason: ${response.stop_reason}`);
+      }
+
+      // Run every tool Claude asked for and collect the results into a single user turn, as the API requires.
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+      for (const block of response.content) {
+        if (block.type !== "tool_use") continue;
+
+        const { resultForDb, resultForApi, isError } = await executeTool(block.name, block.input);
+        emit({ type: "tool_result", tool: block.name, isError });
+
+        if (block.name === "generate_intake_summary" && !isError) {
+          await saveSummary(sessionId, block.input as SummaryInput);
+          summaryGenerated = true;
+        }
+
+        await prisma.message.create({
+          data: {
+            sessionId,
+            role: "tool",
+            content: "",
+            toolName: block.name,
+            toolUseId: block.id,
+            toolResult: resultForDb as Prisma.InputJsonValue,
+          },
+        });
+
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: block.id,
+          content: resultForApi,
+          is_error: isError,
+        });
+      }
+
+
+      if (summaryGenerated) {
+        let closing = extractText(response.content);
+        if (!closing) {
+          closing = DEFAULT_CLOSING;
+          await prisma.message.create({ data: { sessionId, role: "assistant", content: closing } });
+        }
+        return { reply: closing, complete: true };
+      }
+
+      messages.push({ role: "user", content: toolResults });
+      // Loop back: Claude now sees the tool results and decides what to do next (ask a follow-up, call another tool, or wrap up).
     }
 
-    messages.push({ role: "user", content: toolResults });
-    // Loop back: Claude now sees the tool results and decides what to do next (ask a follow-up, call another tool, or wrap up).
+    throw new Error(`Agent loop exceeded ${MAX_ITERATIONS} iterations without completing a turn`);
+  } finally {
+    // Don't end the turn (and close the SSE stream) until the title has been generated and emitted.
+    // titleSession swallows its own errors, so this never masks a failure from the loop above.
+    if (titleTask) await titleTask;
   }
+}
 
-  throw new Error(`Agent loop exceeded ${MAX_ITERATIONS} iterations without completing a turn`);
+// First-turn side task: generate the sidebar title, persist it, and push it to the client.
+// Best-effort — any failure is logged and swallowed so the session simply stays untitled (the UI falls back to the first message).
+async function titleSession(sessionId: string, firstMessage: string, emit: EmitFn): Promise<void> {
+  try {
+    const title = await generateSessionTitle(firstMessage);
+    if (!title) return;
+    await prisma.intakeSession.update({ where: { id: sessionId }, data: { title } });
+    emit({ type: "title", title });
+  } catch (err) {
+    console.error("title generation failed:", err);
+  }
 }
 
 // Write one Message row per content block. Text and tool calls are stored as separate rows (one row per block) so history.ts can reconstruct them exactly.

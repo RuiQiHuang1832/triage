@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 export function MessageBubble({ role, children }: { role: "user" | "assistant"; children: ReactNode }) {
   const isUser = role === "user";
   return (
-    <div className={cn("flex w-full", isUser ? "justify-end" : "justify-start")}>
-      <div className={cn("max-w-[80%] rounded-2xl px-4 py-2.5 leading-relaxed wrap-break-word", isUser ? "rounded-br-md bg-primary text-primary-foreground whitespace-pre-wrap" : "rounded-bl-md text-foreground")}>{isUser || typeof children !== "string" ? children : <AssistantMarkdown content={children} />}</div>
+    <div className={cn("flex w-full", isUser ? "justify-end pl-8" : "justify-start pr-8")}>
+      <div className={cn("rounded-2xl px-4 py-2.5 leading-relaxed wrap-break-word", isUser ? "max-w-[85%] rounded-br-md bg-primary text-primary-foreground whitespace-pre-wrap" : "max-w-full rounded-bl-md text-foreground")}>{isUser || typeof children !== "string" ? children : <AssistantMarkdown content={children} />}</div>
     </div>
   );
 }

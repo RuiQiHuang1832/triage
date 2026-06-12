@@ -28,7 +28,7 @@ intakeRouter.post("/session", async (req: Request, res: Response) => {
 });
 
 // GET /session?clientId=… — every session for a browser, newest first, to populate the sidebar.
-// Each row carries a `preview`: the first patient message, used as an auto-title before any real title exists. A brand-new clientId with no patient record yet just gets an empty list.
+// Each row carries a `preview`: the AI-generated session title once it exists, otherwise the first patient message as a fallback. A brand-new clientId with no patient record yet just gets an empty list.
 intakeRouter.get("/session", async (req: Request, res: Response) => {
   const clientId = req.query.clientId;
   if (typeof clientId !== "string" || !clientId.trim()) {
@@ -58,7 +58,7 @@ intakeRouter.get("/session", async (req: Request, res: Response) => {
     status: session.status,
     createdAt: session.createdAt,
     completedAt: session.completedAt,
-    preview: session.messages[0]?.content ?? null,
+    preview: session.title ?? session.messages[0]?.content ?? null,
   }));
 
   res.json({ sessions });
@@ -77,6 +77,17 @@ intakeRouter.get("/session/:id", async (req: Request, res: Response) => {
     return;
   }
   res.json(session);
+});
+
+// DELETE /session/:id — remove a session along with its messages and summary. Those rows cascade-delete with the session (see schema), so a single delete clears everything. Prisma throws if the row is already gone, which we surface as a 404.
+intakeRouter.delete("/session/:id", async (req: Request, res: Response) => {
+  try {
+    await prisma.intakeSession.delete({ where: { id: req.params.id as string } });
+  } catch {
+    res.status(404).json({ error: "session not found" });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 // POST /session/:id/message — send a patient message and stream the agent's turn. This is the SSE endpoint: it holds the connection open, forwards each AgentEvent as it happens, then emits a final `done` event carrying the full reply and whether the intake is now complete.

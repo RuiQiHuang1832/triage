@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { DisplayItem } from "@/lib/messages";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MessageBubble } from "./MessageBubble";
 import { ToolCallBadge } from "./ToolCallBadge";
 import { TypingIndicator } from "./TypingIndicator";
@@ -22,10 +23,11 @@ export function ChatThread({ items, loading = false, error = null, pending = fal
   }, [items, pending]);
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
+    <div className="flex-1">
+      {/* Extra bottom padding keeps the last message clear of the composer, which is pinned over the bottom of this scroll area. */}
+      <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 pt-6 pb-40">
         {loading ? (
-          <p className="text-center text-sm text-muted-foreground">Loading conversation…</p>
+          <ChatThreadSkeleton />
         ) : error ? (
           <p className="text-center text-sm text-destructive">{error}</p>
         ) : (
@@ -42,6 +44,29 @@ export function ChatThread({ items, loading = false, error = null, pending = fal
 
         {pending && <TypingIndicator />}
         <div ref={bottomRef} />
+      </div>
+    </div>
+  );
+}
+
+
+function ChatThreadSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" aria-label="Loading conversation" aria-busy="true">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-3/4" />
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+      <div className="flex justify-end">
+        <Skeleton className="h-8 w-2/5" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-3/5" />
+        <Skeleton className="h-4 w-1/2" />
+      </div>
+      <div className="flex justify-end">
+        <Skeleton className="h-8 w-1/3" />
       </div>
     </div>
   );

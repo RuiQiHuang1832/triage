@@ -8,7 +8,7 @@ import { PageTitle } from "@/components/PageTitle";
 import { useIntake } from "@/components/AppShell";
 
 export default function Home() {
-  const { state, sessions, refreshSessions, activateDraft } = useIntake();
+  const { state, sessions, refreshSessions, activateDraft, applySessionTitle } = useIntake();
 
   // Mirror the sidebar: a selected, titled session shows its preview; a fresh or not-yet-titled draft is "New Chat".
   const activeId = state.status === "ready" ? state.sessionId : null;
@@ -23,6 +23,7 @@ export default function Home() {
         existing={state.existing}
         activateDraft={activateDraft}
         onTurnEnd={refreshSessions}
+        onTitle={applySessionTitle}
       />
     );
   } else if (state.status === "error") {

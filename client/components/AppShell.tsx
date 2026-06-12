@@ -23,7 +23,7 @@ function truncateWords(text: string, max: number): string {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const intake = useIntakeBootstrap();
-  const { state, sessions, sessionsLoading, beginIntake, newIntake, selectSession } = intake;
+  const { state, sessions, sessionsLoading, beginIntake, newIntake, selectSession, removeSession } = intake;
   const router = useRouter();
   const pathname = usePathname();
 
@@ -55,6 +55,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.push("/");
   };
 
+  const handleDelete = async (id: string) => {
+    await removeSession(id);
+  };
+
   const showOnboarding = state.status === "onboarding" || starting;
 
   return (
@@ -66,6 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           loading={sessionsLoading}
           onSelect={handleSelect}
           onNewIntake={handleNewIntake}
+          onDelete={handleDelete}
         />
         <SidebarInset className="min-h-0">
           <header className="flex h-12 items-center gap-2 border-b border-border px-3">

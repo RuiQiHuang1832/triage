@@ -34,6 +34,8 @@ model IntakeSession {
   patientId   String
   patient     Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
   status      SessionStatus  @default(in_progress)
+  // Short AI-generated sidebar label, set from the patient's first message. Null until generated; the UI falls back to the first message.
+  title       String?
   createdAt   DateTime       @default(now())
   completedAt DateTime?
   messages    Message[]

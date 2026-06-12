@@ -49,6 +49,11 @@ export function getSession(id: string): Promise<Session> {
   return request<Session>(`/session/${id}`);
 }
 
+// DELETE /session/:id — permanently remove a session and its messages/summary.
+export async function deleteSession(id: string): Promise<void> {
+  await request<{ ok: boolean }>(`/session/${id}`, { method: "DELETE" });
+}
+
 // GET /session/:id/summary — the final summary; rejects with a 404 until the intake completes.
 export function getSummary(id: string): Promise<IntakeSummary> {
   return request<IntakeSummary>(`/session/${id}/summary`);

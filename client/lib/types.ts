@@ -23,7 +23,7 @@ export interface Session {
   messages: Message[];
 }
 
-// One sidebar row from GET /session?clientId=…. `preview` is the first patient message, used as an auto-title.
+// One sidebar row from GET /session?clientId=…. `preview` is the AI-generated session title once it exists, falling back to the first patient message.
 export interface SessionSummaryRow {
   id: string;
   status: SessionStatus;
@@ -68,10 +68,11 @@ export interface CreateSessionResponse {
 }
 
 // Events streamed over SSE from POST /session/:id/message.
-// `token`/`tool_call`/`tool_result` come from the agent loop; `done`/`error` are emitted by the route to terminate the stream.
+// `token`/`tool_call`/`tool_result`/`title` come from the agent loop; `done`/`error` are emitted by the route to terminate the stream.
 export type AgentEvent =
   | { type: "token"; text: string }
   | { type: "tool_call"; tool: string }
   | { type: "tool_result"; tool: string; isError: boolean }
+  | { type: "title"; title: string }
   | { type: "done"; reply: string; complete: boolean }
   | { type: "error"; message: string };

@@ -10,6 +10,8 @@ export interface StreamHandlers {
   onToken?: (text: string) => void;
   onToolCall?: (tool: string) => void;
   onToolResult?: (tool: string, isError: boolean) => void;
+  // Fires once, mid-turn, when the session's sidebar title is ready.
+  onTitle?: (title: string) => void;
 }
 
 export interface StreamResult {
@@ -76,6 +78,9 @@ export function streamMessage(
             break;
           case "tool_result":
             handlers.onToolResult?.(event.tool, event.isError);
+            break;
+          case "title":
+            handlers.onTitle?.(event.title);
             break;
           case "done":
             settle(() => resolve({ reply: event.reply, complete: event.complete }));

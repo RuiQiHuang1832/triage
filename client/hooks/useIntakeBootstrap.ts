@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createSession, listSessions } from "@/lib/api";
+import { createSession, deleteSession, listSessions } from "@/lib/api";
 import { getClientId, peekClientId } from "@/lib/clientId";
 import type { SessionSummaryRow } from "@/lib/types";
 import {
@@ -27,9 +27,13 @@ export interface IntakeBootstrap {
   beginIntake: () => Promise<void>;
   newIntake: () => Promise<void>;
   selectSession: (id: string) => void;
+  // Delete a session server-side and drop it from the sidebar; if it's the one being viewed, fall back to a fresh draft.
+  removeSession: (id: string) => Promise<void>;
   // Promote the current draft to a real server session on the first message; returns the new id.
   activateDraft: () => Promise<string>;
   refreshSessions: () => void;
+  // Apply an AI-generated title to a sidebar row live, as it arrives over SSE mid-turn.
+  applySessionTitle: (id: string, title: string) => void;
 }
 
 // A fresh key per draft/selection so the chat view remounts when the user genuinely switches views.
@@ -45,15 +49,29 @@ export function useIntakeBootstrap(): IntakeBootstrap {
   // The clientId, captured once it's known (on boot or at "Begin Intake"), so the session actions don't have to re-read localStorage each time.
   const clientIdRef = useRef<string | null>(null);
 
+  // Titles pushed over SSE mid-turn, before the server-side row reflects them. We overlay these onto
+  // every fetched list so a refresh that lands between the row's creation and its title write can't
+  // blank a title we've already shown.
+  const liveTitles = useRef<Map<string, string>>(new Map());
+
   // Refetch the sidebar list. Non-critical: on failure we keep whatever list we already have rather than surfacing an error.
   const refreshSessions = useCallback(() => {
     const clientId = clientIdRef.current;
     if (!clientId) return;
     setSessionsLoading(true);
     listSessions(clientId)
-      .then(setSessions)
+      .then((rows) => setSessions(rows.map((s) => {
+        const title = liveTitles.current.get(s.id);
+        return title ? { ...s, preview: title } : s;
+      })))
       .catch(() => {})
       .finally(() => setSessionsLoading(false));
+  }, []);
+
+  // Drop an AI-generated title onto its row immediately, and remember it so a later refresh keeps it.
+  const applySessionTitle = useCallback((id: string, title: string) => {
+    liveTitles.current.set(id, title);
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, preview: title } : s)));
   }, []);
 
   // Open a fresh draft: nothing is created server-side, so this doesn't touch the DB and the draft stays out of the sidebar until its first message (activateDraft).
@@ -101,6 +119,17 @@ export function useIntakeBootstrap(): IntakeBootstrap {
     setState({ status: "ready", sessionId: id, viewKey: id, existing: true });
   }, []);
 
+  // Delete a session, then refresh the sidebar. If the deleted session is the one currently open, reset to a blank draft so the chat view doesn't keep pointing at a gone session.
+  const removeSession = useCallback(async (id: string): Promise<void> => {
+    await deleteSession(id);
+    liveTitles.current.delete(id);
+    if (peekCurrentSessionId() === id) {
+      clearCurrentSessionId();
+      setState({ status: "ready", sessionId: null, viewKey: nextViewKey(), existing: false });
+    }
+    refreshSessions();
+  }, [refreshSessions]);
+
   // Create the server session for the current draft, on its first message. Records it as current and surfaces it in the sidebar, but keeps the same viewKey so ChatView doesn't remount mid-stream.
   const activateDraft = useCallback(async (): Promise<string> => {
     const clientId = clientIdRef.current ?? getClientId();
@@ -111,5 +140,5 @@ export function useIntakeBootstrap(): IntakeBootstrap {
     return sessionId;
   }, [refreshSessions]);
 
-  return { state, sessions, sessionsLoading, beginIntake, newIntake, selectSession, activateDraft, refreshSessions };
+  return { state, sessions, sessionsLoading, beginIntake, newIntake, selectSession, removeSession, activateDraft, refreshSessions, applySessionTitle };
 }

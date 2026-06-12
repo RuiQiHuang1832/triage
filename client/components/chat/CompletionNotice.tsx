@@ -8,7 +8,7 @@ export function CompletionNotice({ sessionId }: { sessionId: string }) {
     <div className="mx-auto w-full max-w-3xl px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3">
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CircleCheck className="size-4 text-foreground" />
+          <CircleCheck className="size-4 text-foreground" color="green" />
           This intake is complete. You can view your summary here.
         </p>
         <Link

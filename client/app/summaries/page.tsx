@@ -7,7 +7,7 @@ import { getSummary } from "@/lib/api";
 import type { IntakeSummary, SessionSummaryRow } from "@/lib/types";
 import { useIntake } from "@/components/AppShell";
 import { PageTitle } from "@/components/PageTitle";
-import { SummaryCard } from "@/components/SummaryCard";
+import { SummaryCard, SummaryCardSkeleton } from "@/components/SummaryCard";
 import { Button } from "@/components/ui/button";
 
 export default function SummariesPage() {
@@ -65,7 +65,7 @@ function SummaryDetail({ id, onBack }: { id: string; onBack: () => void }) {
       <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 gap-1.5 text-muted-foreground">
         <ArrowLeft className="size-4" /> All summaries
       </Button>
-      {!summary && !error && <p className="text-sm text-muted-foreground">Loading summary…</p>}
+      {!summary && !error && <SummaryCardSkeleton />}
       {error && <p className="text-sm text-destructive">Couldn&apos;t load this summary: {error}</p>}
       {summary && <SummaryCard summary={summary} />}
     </div>

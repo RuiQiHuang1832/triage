@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import type { IntakeSummary, SummaryMedication, SummarySymptom } from "@/lib/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // The JSON columns are best-effort shapes; coerce to an array so a malformed row never throws.
 function asArray<T>(value: unknown): T[] {
@@ -116,4 +117,34 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 function Empty() {
   return <p className="text-sm text-muted-foreground">None reported.</p>;
+}
+
+// Mirrors SummaryCard's layout so the swap to real content doesn't shift the page.
+export function SummaryCardSkeleton() {
+  return (
+    <article className="space-y-6 rounded-2xl border border-border bg-card p-6" aria-label="Loading summary" aria-busy="true">
+      <header className="space-y-2">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="h-3 w-40" />
+      </header>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        {["Symptoms", "Medications", "Allergies", "BMI"].map((title) => (
+          <section key={title} className="space-y-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </section>
+        ))}
+      </div>
+
+      <div className="space-y-2 border-t border-border pt-5">
+        <Skeleton className="h-3 w-28" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+      </div>
+    </article>
+  );
 }

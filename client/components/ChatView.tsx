@@ -16,11 +16,14 @@ export function ChatView({
   existing = false,
   activateDraft,
   onTurnEnd,
+  onTitle,
 }: {
   sessionId: string | null;
   existing?: boolean;
   activateDraft: () => Promise<string>;
   onTurnEnd?: () => void;
+  // Called mid-turn when the agent generates this session's sidebar title.
+  onTitle?: (sessionId: string, title: string) => void;
 }) {
   // The live session id. Null on a fresh draft until the first message promotes it to a real server session (activateDraft); seeded from the prop when reopening an existing session.
   const [sessionId, setSessionId] = useState<string | null>(propSessionId);
@@ -74,19 +77,22 @@ export function ChatView({
     setStreaming(true);
     setPending(true);
 
-    // The assistant's reply streams into a single bubble we create lazily on the first token. Tool badges resolve in FIFO order per tool name, since a turn emits every tool_call up front and then every tool_result.
-    const assistantId = nextId("assistant");
-    let assistantStarted = false;
+    // A turn can interleave text and tool calls (text → tool → more text). Each text run streams into its own bubble, created lazily on its first token, so the tool badge sits between the runs — matching how the rehydrated transcript renders. currentAssistantId is the bubble tokens currently append to; a tool call clears it (in onToolCall) so the next token opens a fresh bubble below the badge instead of concatenating onto the text above. Tool badges resolve in FIFO order per tool name, since a turn emits every tool_call up front and then every tool_result.
+    let currentAssistantId: string | null = null;
+    let producedToken = false;
     const runningTools: Record<string, string[]> = {};
 
-    // The flag decision lives out here, not inside the updater: React Strict Mode invokes state updaters twice in dev, so a flag flipped inside one would take the wrong branch on the second run and drop the bubble. The updater itself stays pure.
-    const ensureAssistantBubble = (delta: string) => {
+    // The create-vs-append decision lives out here, not inside the updater: React Strict Mode invokes state updaters twice in dev, so a flag flipped inside one would take the wrong branch on the second run and drop the bubble. The updater itself stays pure.
+    const appendToken = (delta: string) => {
       setPending(false);
-      if (!assistantStarted) {
-        assistantStarted = true;
-        setItems((prev) => [...prev, { kind: "bubble", id: assistantId, role: "assistant", content: delta }]);
+      producedToken = true;
+      if (currentAssistantId === null) {
+        const id = nextId("assistant");
+        currentAssistantId = id;
+        setItems((prev) => [...prev, { kind: "bubble", id, role: "assistant", content: delta }]);
       } else {
-        setItems((prev) => prev.map((it) => (it.id === assistantId && it.kind === "bubble" ? { ...it, content: it.content + delta } : it)));
+        const id = currentAssistantId;
+        setItems((prev) => prev.map((it) => (it.id === id && it.kind === "bubble" ? { ...it, content: it.content + delta } : it)));
       }
     };
 
@@ -102,12 +108,14 @@ export function ChatView({
         id,
         text,
         {
-          onToken: (delta) => ensureAssistantBubble(delta),
+          onToken: (delta) => appendToken(delta),
           onToolCall: (tool) => {
             setPending(false);
             const toolId = nextId(`tool-${tool}`);
             (runningTools[tool] ??= []).push(toolId);
             setItems((prev) => [...prev, { kind: "tool", id: toolId, tool, state: "running" }]);
+            // Close the current bubble so text emitted after this tool resolves opens a new bubble below the badge, rather than concatenating onto the text above it.
+            currentAssistantId = null;
           },
           onToolResult: (tool, isError) => {
             const toolId = runningTools[tool]?.shift();
@@ -117,13 +125,15 @@ export function ChatView({
             // The agent resumes reasoning after a tool resolves — wait on it again.
             setPending(true);
           },
+          // `id` is the promoted server session id, so the sidebar updates the right row even on a freshly activated draft.
+          onTitle: (title) => onTitle?.(id, title),
         },
         ctrl.signal,
       );
 
       // The completion turn may return a canned closing without streaming any tokens, so there may be no assistant bubble yet. Fall back to the final reply for that case.
-      if (!assistantStarted && result.reply) {
-        setItems((prev) => [...prev, { kind: "bubble", id: assistantId, role: "assistant", content: result.reply }]);
+      if (!producedToken && result.reply) {
+        setItems((prev) => [...prev, { kind: "bubble", id: nextId("assistant"), role: "assistant", content: result.reply }]);
       }
       if (result.complete) setCompleted(true);
     } catch (err) {
@@ -148,19 +158,22 @@ export function ChatView({
           <ChatInput onSend={handleSend} disabled={loading || error !== null} />
         </ChatLanding>
       ) : (
-        <>
+        // The whole conversation scrolls in one container so the scrollbar spans the full height; the composer is pinned to the bottom inside it rather than living in a separate pane.
+        <div className="scrollbar-clean flex min-h-0 flex-1 flex-col overflow-y-auto">
           <ChatThread items={items} loading={loading} error={error} pending={pending} />
-          {streamError && (
-            <div className="mx-auto w-full max-w-3xl px-4">
-              <p className="rounded-md border border-destructive/30 px-3 py-2 text-sm text-destructive">{streamError} — please try again.</p>
-            </div>
-          )}
-          {completed ? (
-            sessionId && <CompletionNotice sessionId={sessionId} />
-          ) : (
-            <ChatInput onSend={handleSend} disabled={loading || streaming || error !== null} compact />
-          )}
-        </>
+          <div className="sticky bottom-0 z-10 bg-background">
+            {streamError && (
+              <div className="mx-auto w-full max-w-3xl px-4">
+                <p className="rounded-md border border-destructive/30 px-3 py-2 text-sm text-destructive">{streamError} — please try again.</p>
+              </div>
+            )}
+            {completed ? (
+              sessionId && <CompletionNotice sessionId={sessionId} />
+            ) : (
+              <ChatInput onSend={handleSend} disabled={loading || streaming || error !== null} compact />
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -30,7 +30,7 @@ User message
   - `calculate_bmi` — height/weight → BMI + category
   - `generate_intake_summary` — produces the structured pre-visit summary
 - **Live chat interface** — Claude's replies stream token by token alongside a typing indicator and tool-call badges that surface what the agent is doing in the moment (e.g. "Checking drug interactions…"), making the agentic behavior visible as it happens.
-- **Session history & resume** — every message and tool result is persisted; past intakes are listed in a sidebar and can be reopened and continued. Identity is per-browser, so there's no account to create.
+- **Session history & resume** — every message and tool result is persisted; past intakes appear in a sidebar under short AI-generated titles and can be reopened, continued, or deleted. Identity is per-browser, so there's no account to create.
 - **Pre-visit summaries** — a completed intake produces a formatted summary — chief complaint, symptoms, medications, allergies, BMI, and a clinical narrative — browseable any time from a dedicated Summaries page.
 - **Prompt caching** — the system prompt, tool definitions, and conversation history are cached to cut token cost across turns.
 
@@ -38,7 +38,7 @@ User message
 
 **Backend**
 - Node.js + TypeScript
-- Anthropic Claude API (`claude-sonnet-4`) with tool use
+- Anthropic Claude API with tool use — `claude-sonnet-4-6` runs the intake agent, `claude-haiku-4-5` titles sessions
 - Prisma ORM + PostgreSQL (Supabase)
 - Express HTTP layer with Server-Sent Events (SSE) for streaming
 
