@@ -6,6 +6,8 @@ The agent isn't just answering turn by turn — it drives the conversation towar
 
 > **Note:** This is a demo project and is not intended for real medical use.
 
+https://github.com/user-attachments/assets/d1244727-4158-4b89-acc1-8b29410a84fe
+
 ## How It Works
 
 Each patient message runs through an agent loop on the backend:
